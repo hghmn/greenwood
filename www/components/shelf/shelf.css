@@ -76,3 +76,23 @@
     color:red;
   }
 }
+
+.mobileToggle {
+  display: none;
+  text-align: center;
+  text-transform: uppercase;
+
+  @media (max-width: 768px) {
+    display:block;
+  }
+}
+
+.shelfShell {
+  background-color: #F2ECEF;
+
+  @media (max-width: 768px) {
+    position: absolute;
+    z-index: 2;
+    width:100%;
+  }
+}

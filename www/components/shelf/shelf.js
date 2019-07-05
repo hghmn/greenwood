@@ -15,6 +15,9 @@ const chevronDwn = html`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448
 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373
 9.372-24.569 9.372-33.942 0z"/></svg>`;
 
+//stand in for mobile menu view state - adh
+let show = true;
+
 // eslint-disable-next-line no-underscore-dangle
 const compose = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || origCompose;
 // eslint-disable-next-line
@@ -100,6 +103,12 @@ class shelf extends LitElement {
     this.requestUpdate();
   }
 
+  //dummy method to set visibility of mobile menu
+  toggleMobileMenu(evt) {
+    evt.preventDefault()
+    show = !show
+  }
+
   renderList() {
 
     /* eslint-disable */
@@ -135,8 +144,9 @@ class shelf extends LitElement {
     <style>
       ${css}
     </style>
-      <div>
-        <ul>
+      <div class="shelfShell">
+        <p @click="${this.toggleMobileMenu}" class="mobileToggle">${ show ? 'show' : 'hide'} menu</p>
+        <ul class="${show ? '' : 'hidden'}" >
           ${this.renderList()}
         </ul>
       </div>
