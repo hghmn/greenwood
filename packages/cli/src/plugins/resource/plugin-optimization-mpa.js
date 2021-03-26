@@ -4,10 +4,65 @@
  * This is a Greenwood default plugin.
  *
  */
+const Buffer = require('buffer').Buffer;
 const fs = require('fs');
 const path = require('path');
 const { ResourceInterface } = require('../../lib/resource-interface');
 // const rollupPluginAlias = require('@rollup/plugin-alias');
+
+let routesCache;
+
+const getRouteTagsCache = function(compilation) {
+  if (routesCache) {
+    return routesCache;
+  }
+
+  console.debug('getRouteTagsCache!!!!!! (should only happen once)');
+
+  routesCache = compilation.graph.map((page) => {
+    const { template, route } = page;
+    // let currentTemplate;
+    const { projectDirectory, scratchDir, outputDir } = compilation.context;
+    const pageContents = fs.readFileSync(path.join(scratchDir, `${page.route}/index.html`), 'utf-8');
+    const bodyContents = pageContents.match(/<body>(.*)<\/body>/s)[0].replace('<body>', '').replace('</body>', '');
+    const basePath = url.replace(projectDirectory, '');
+    const id = Buffer.from(bodyContents).toString('base64');
+    const hashOffset = id.length / 2;
+    const routeKey = `/_routes${basePath}`
+      .replace('.greenwood/', '')
+      .replace('//', '/')
+      .replace('.html', `.${id.slice(hashOffset, hashOffset + 8).toLowerCase()}.html`);
+    // const outputBundlePath = `${outputDir}${routeKey}`;
+
+    // console.debug('outputBundlePath', outputBundlePath);
+    // console.debug('basePath', basePath);
+    // console.debug('routeKey', routeKey);
+    // console.debug('*****************************************');
+    // .slice(bodyContents.length / 2, 8).toLowerCase();
+    // console.debug('whole buffer', Buffer.from(bodyContents).toString('base64'));
+    // console.debug('bodyContents', bodyContents);
+    // console.debug('hash offset', hashOffset);
+    // console.debug('id', id);
+
+    // contents
+    // routeKey
+    // if (url.replace(scratchDir, '') === `${page.route}index.html`) {
+    //   currentTemplate = template;
+    // }
+
+    return {
+      contents: bodyContents,
+      template,
+      route,
+      routeKey,
+      routeTag: `
+        <greenwood-route data-route="${route}" data-template="${template}" data-key="${routeKey}"></greenwood-route>
+      `
+    };
+  });
+
+  return routesCache;
+};
 
 class OptimizationMPAResource extends ResourceInterface {
   constructor(compilation, options) {
@@ -65,28 +120,18 @@ class OptimizationMPAResource extends ResourceInterface {
   async optimize(url, body) {
     return new Promise(async (resolve, reject) => {
       try {
-        let currentTemplate;
         const { projectDirectory, scratchDir, outputDir } = this.compilation.context;
-        const bodyContents = body.match(/<body>(.*)<\/body>/s)[0].replace('<body>', '').replace('</body>', '');
-        const outputBundlePath = `${outputDir}/_routes${url.replace(projectDirectory, '')}`
-          .replace('.greenwood/', '')
-          .replace('//', '/');
+        const routesCache = getRouteTagsCache(this.compilation);
+        const routeTags = routesCache.map(route => route.routeTag);
+        const currentRoute = routesCache.filter((route) => {
+          console.debug('url', url);
+          console.debug('route.url', route.url);
+          console.debug('*********************');
+          return route.url === url;
+        })[0];
+        const outputBundlePath = `${outputDir}${currentRoute.routeKey}`;
 
-        const routeTags = this.compilation.graph.map((page) => {
-          const template = path.extname(page.filename) === '.html'
-            ? page.route
-            : page.template;
-          const key = page.route === '/'
-            ? ''
-            : page.route.slice(0, page.route.lastIndexOf('/'));
-
-          if (url.replace(scratchDir, '') === `${page.route}index.html`) {
-            currentTemplate = template;
-          }
-          return `
-            <greenwood-route data-route="${page.route}" data-template="${template}" data-key="/_routes${key}/index.html"></greenwood-route>
-          `;
-        });
+        console.debug('currentRoute', currentRoute);
 
         if (!fs.existsSync(path.dirname(outputBundlePath))) {
           fs.mkdirSync(path.dirname(outputBundlePath), {
@@ -94,7 +139,7 @@ class OptimizationMPAResource extends ResourceInterface {
           });
         }
 
-        await fs.promises.writeFile(outputBundlePath, bodyContents);
+        await fs.promises.writeFile(outputBundlePath, contents);
 
         // TODO this gets swalloed by Rollup?
         // <script type="module" src="/node_modules/@greenw">
@@ -105,14 +150,14 @@ class OptimizationMPAResource extends ResourceInterface {
           <script>
             window.__greenwood = window.__greenwood || {};
             
-            window.__greenwood.currentTemplate = "${currentTemplate}";
+            window.__greenwood.currentTemplate = "${currentRoute.template}";
           </script> 
           </head>
         `).replace(/<body>(.*)<\/body>/s, `
           <body>\n
             
             <router-outlet>
-              ${bodyContents}\n
+              ${currentRoute.contents}\n
             </router-outlet>
             
             ${routeTags.join('\n')}

@@ -27,12 +27,12 @@ const { JSDOM } = require('jsdom');
 const path = require('path');
 const TestBed = require('../../../../../test/test-bed');
 
-describe('Build Greenwood With: ', function() {
+describe.only('Build Greenwood With: ', function() {
   const LABEL = 'Custom Mode';
   let setup;
 
   before(async function() {
-    setup = new TestBed();
+    setup = new TestBed(true);
 
     const greenwoodRouterLibs = (await glob(`${process.cwd()}/packages/cli/src/lib/router.js`)).map((lib) => {
       return {
@@ -59,7 +59,7 @@ describe('Build Greenwood With: ', function() {
 
       before(async function() {
         dom = await JSDOM.fromFile(path.resolve(this.context.publicDir, 'index.html'));
-        aboutDom = await JSDOM.fromFile(path.resolve(this.context.publicDir, 'about/index.html'));
+        aboutDom =  await JSDOM.fromFile(path.resolve(this.context.publicDir, 'about/index.html'));
         partials = await glob(`${this.context.publicDir}/_routes/**/*.html`);
       });
       
@@ -125,14 +125,14 @@ describe('Build Greenwood With: ', function() {
       });
 
       it('should have the expected partial output to match the contents of the home page in the <router-outlet> tag in the <body>', function() {
-        const aboutPartial = fs.readFileSync(path.join(this.context.publicDir, '_routes/about/index.html'), 'utf-8');
+        const aboutPartial = fs.readFileSync(partials[0], 'utf-8');
         const aboutRouterOutlet = aboutDom.window.document.querySelectorAll('body > router-outlet')[0];
 
         expect(aboutRouterOutlet.innerHTML).to.contain(aboutPartial);
       });
 
       it('should have the expected partial output to match the contents of the about page in the <router-outlet> tag in the <body>', function() {
-        const homePartial = fs.readFileSync(path.join(this.context.publicDir, '_routes/index.html'), 'utf-8');
+        const homePartial = fs.readFileSync(partials[1], 'utf-8');
         const homeRouterOutlet = dom.window.document.querySelectorAll('body > router-outlet')[0];
         
         expect(homeRouterOutlet.innerHTML).to.contain(homePartial);
@@ -143,7 +143,7 @@ describe('Build Greenwood With: ', function() {
   });
 
   after(function() {
-    setup.teardownTestBed();
+    // setup.teardownTestBed();
   });
 
 });
