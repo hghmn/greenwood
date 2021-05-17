@@ -231,7 +231,7 @@ class StandardHtmlResource extends ResourceInterface {
   async shouldServe(url) {
     const { userWorkspace } = this.compilation.context;
     const relativeUrl = this.getRelativeUserworkspaceUrl(url);
-    const barePath = relativeUrl.endsWith('/')
+    const barePath = relativeUrl.endsWith(path.sep)
       ? `${userWorkspace}/pages${relativeUrl}index`
       : `${userWorkspace}/pages${relativeUrl.replace('.html', '')}`;
       
@@ -252,7 +252,7 @@ class StandardHtmlResource extends ResourceInterface {
         let body = '';
         let template = null;
         let processedMarkdown = null;
-        const barePath = normalizedUrl.endsWith('/')
+        const barePath = normalizedUrl.endsWith(path.sep)
           ? `${userWorkspace}/pages${normalizedUrl}index`
           : `${userWorkspace}/pages${normalizedUrl.replace('.html', '')}`;
         const isMarkdownContent = fs.existsSync(`${barePath}.md`)
