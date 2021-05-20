@@ -1,8 +1,8 @@
-import { css, html, LitElement, unsafeCSS } from 'lit-element';
+import { css, html, LitElement, unsafeCSS } from 'lit';
 import bannerCss from './banner.css';
 import buttonCss from './button.css';
-import '@evergreen-wc/eve-button';
-import '@evergreen-wc/eve-container';
+// import '@evergreen-wc/eve-button';
+// import '@evergreen-wc/eve-container';
 
 class Banner extends LitElement {
   constructor() {
