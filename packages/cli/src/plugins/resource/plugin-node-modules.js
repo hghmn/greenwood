@@ -153,7 +153,7 @@ const walkPackageJson = (packageJson = {}) => {
             packageExport = exportMapEntry;
           }
   
-          if (packageExport && path.extname(packageExport) === '.js') {
+          if (packageExport) {
             updateImportMap(`${dependency}/${packageExport.replace('./', '')}`, `/node_modules/${dependency}/${packageExport.replace('./', '')}`);
           }
         });
