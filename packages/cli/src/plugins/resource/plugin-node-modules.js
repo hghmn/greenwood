@@ -16,7 +16,7 @@ const importMap = {};
 const updateImportMap = (entry, entryPath) => {
 
   if (path.extname(entryPath) === '') {
-    entryPath = `${entryPath}/${entry}.js`;
+    entryPath = `${entryPath}.js`;
   }
 
   importMap[entry] = entryPath;
@@ -207,7 +207,12 @@ class NodeModulesResource extends ResourceInterface {
 
   async resolve(url) {
     const { projectDirectory } = this.compilation.context;
-    const bareUrl = this.getBareUrlPath(url);
+    let bareUrl = this.getBareUrlPath(url);
+
+    bareUrl = path.extname(url) === ''
+      ? `${url}.js`
+      : url;
+      
     const isAbsoluteNodeModulesFile = fs.existsSync(path.join(projectDirectory, bareUrl));
     const nodeModulesUrl = isAbsoluteNodeModulesFile
       ? path.join(projectDirectory, bareUrl)

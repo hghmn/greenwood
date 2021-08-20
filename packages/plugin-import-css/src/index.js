@@ -4,6 +4,7 @@
  * Enables using JavaScript to import CSS files, using ESM syntax.
  *
  */
+const fs = require('fs');
 const path = require('path');
 const postcssRollup = require('rollup-plugin-postcss');
 const { ResourceInterface } = require('@greenwood/cli/src/lib/resource-interface');
@@ -13,6 +14,15 @@ class ImportCssResource extends ResourceInterface {
     super(compilation, options);
     this.extensions = ['.css'];
     this.contentType = 'text/javascript';
+  }
+
+  async shouldResolve(url) {
+    return path.extname(url).indexOf(this.extensions[0]) === 0 // .css, .css.js
+      && fs.existsSync(path.join(this.compilation.context.projectDirectory, `${url}.js`));
+  }
+
+  async resolve(url) {
+    return path.join(this.compilation.context.projectDirectory, `${url}.js`);
   }
 
   async shouldIntercept(url, body, headers) {
