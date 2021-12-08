@@ -12,34 +12,34 @@ class LiveReloadServer extends ServerInterface {
   async start() {
     const { userWorkspace } = this.compilation.context;
     const standardPluginsPath = fileURLToPath(new URL('../resource', import.meta.url));
-    const standardPluginsNames = fs.readdirSync(standardPluginsPath)
-      .filter(filename => filename.indexOf('plugin-standard') === 0);
-    const standardPluginsExtensions = (await Promise.all(standardPluginsNames.map(async (filename) => {
-      const pluginImport = await import(pathToFileURL(`${standardPluginsPath}/${filename}`));
-      const plugin = pluginImport[Object.keys(pluginImport)[0]];
+    // const standardPluginsNames = fs.readdirSync(standardPluginsPath)
+    //   .filter(filename => filename.indexOf('plugin-standard') === 0);
+    // const standardPluginsExtensions = (await Promise.all(standardPluginsNames.map(async (filename) => {
+    //   const pluginImport = await import(pathToFileURL(`${standardPluginsPath}/${filename}`));
+    //   const plugin = pluginImport[Object.keys(pluginImport)[0]];
       
-      return plugin;
-    })))
-      .map((plugin) => {
-        // assume that if it is an array, the second item is a rollup plugin
-        const instance = plugin.length
-          ? plugin[0].provider(this.compilation)
-          : plugin.provider(this.compilation);
+    //   return plugin;
+    // })))
+    //   .map(async (plugin) => {
+    //     // assume that if it is an array, the second item is a rollup plugin
+    //     const instance = plugin.length
+    //       ? await plugin[0].provider(this.compilation)
+    //       : await plugin.provider(this.compilation);
 
-        return instance.extensions.flat();
-      })
-      .flat();
-    const customPluginsExtensions = this.compilation.config.plugins
-      .filter((plugin) => plugin.type === 'resource')
-      .map((plugin) => {
-        return plugin.provider(this.compilation).extensions.flat();
-      }).flat();
+    //     return instance.extensions.flat();
+    //   })
+    //   .flat();
+    // const customPluginsExtensions = this.compilation.config.plugins
+    //   .filter((plugin) => plugin.type === 'resource')
+    //   .map(async (plugin) => {
+    //     return (plugin.provider(this.compilation)).extensions.flat();
+    //   }).flat();
 
     // filter out wildcards or otherwise undesired values and remove any . since livereload likes them that way
     const allExtensions = [
-      ...standardPluginsExtensions,
-      ...customPluginsExtensions,
-      ...this.compilation.config.devServer.extensions
+      // ...standardPluginsExtensions,
+      // ...customPluginsExtensions,
+      // ...this.compilation.config.devServer.extensions
     ]
       .filter((ext) => ext !== '*' || ext !== '')
       .map((ext) => ext.replace('.', ''));

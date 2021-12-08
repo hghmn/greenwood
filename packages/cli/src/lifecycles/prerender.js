@@ -3,13 +3,16 @@ import fs from 'fs';
 import path from 'path';
 
 async function optimizePage(compilation, contents, route, outputPath, outputDir) {
-  const optimizeResources = compilation.config.plugins.filter((plugin) => {
-    return plugin.type === 'resource';
-  }).map((plugin) => {
+  const resourcePlugins = compilation.config.plugins.filter((plugin) => plugin.type === 'resource');
+  const optimizeResources = (await Promise.all(resourcePlugins.map(async (plugin) => {
     return plugin.provider(compilation);
-  }).filter((provider) => {
-    return provider.shouldOptimize && provider.optimize;
-  });
+  }))).filter((plugin) => plugin.shouldOptimize && plugin.optimize);
+
+  // }).map(async (plugin) => {
+  //   return await plugin.provider(compilation);
+  // }).filter((provider) => {
+  //   return provider.shouldOptimize && provider.optimize;
+  // });
 
   const htmlOptimized = await optimizeResources.reduce(async (htmlPromise, resource) => {
     const html = await htmlPromise;
@@ -98,12 +101,9 @@ async function preRenderCompilation(compilation) {
 async function staticRenderCompilation(compilation) {
   const pages = compilation.graph;
   const scratchDir = compilation.context.scratchDir;
-  const htmlResource = compilation.config.plugins.filter((plugin) => {
-    return plugin.name === 'plugin-standard-html';
-  }).map((plugin) => {
-    return plugin.provider(compilation);
-  })[0];
-
+  const pluginStandardHtml = compilation.config.plugins.filter((plugin) => plugin.name === 'plugin-standard-html');
+  const htmlResource = await pluginStandardHtml.provider(compilation);
+  
   console.info('pages to generate', `\n ${pages.map(page => page.path).join('\n ')}`);
   
   await Promise.all(pages.map(async (page) => {

@@ -6,26 +6,25 @@ import { ResourceInterface } from '../lib/resource-interface.js';
 const getDevServer = async(compilation) => {
   const app = new Koa();
   const compilationCopy = Object.assign({}, compilation);
+  const greenwoodDefaultStandardResourcePlugins = compilation.config.plugins.filter((plugin) => plugin.type === 'resource' && plugin.isGreenwoodDefaultPlugin);
+  const userResourcePlugins = compilation.config.plugins.filter((plugin) => plugin.type === 'resource' && !plugin.isGreenwoodDefaultPlugin);
+
   const resources = [
     // Greenwood default standard resource and import plugins
-    ...compilation.config.plugins.filter((plugin) => {
-      return plugin.type === 'resource' && plugin.isGreenwoodDefaultPlugin;
-    }).map((plugin) => {
+    ...await Promise.all(greenwoodDefaultStandardResourcePlugins.map(async (plugin) => {
       return plugin.provider(compilationCopy);
-    }),
+    })),
 
     // custom user resource plugins
-    ...compilation.config.plugins.filter((plugin) => {
-      return plugin.type === 'resource' && !plugin.isGreenwoodDefaultPlugin;
-    }).map((plugin) => {
-      const provider = plugin.provider(compilationCopy);
+    ...await Promise.all(userResourcePlugins.map(async (plugin) => {
+      const provider = await plugin.provider(compilationCopy);
 
       if (!(provider instanceof ResourceInterface)) {
         console.warn(`WARNING: ${plugin.name}'s provider is not an instance of ResourceInterface.`);
       }
 
       return provider;
-    })
+    }))
   ];
 
   // resolve urls to paths first
@@ -124,16 +123,17 @@ const getDevServer = async(compilation) => {
 
 const getProdServer = async(compilation) => {
   const app = new Koa();
-  const standardResources = compilation.config.plugins.filter((plugin) => {
+  const serverResourcePlugins = compilation.config.plugins.filter((plugin) => {
     // html is intentionally omitted
     return plugin.isGreenwoodDefaultPlugin
       && plugin.type === 'resource'
       && ((plugin.name.indexOf('plugin-standard') >= 0 // allow standard web resources
       && plugin.name.indexOf('plugin-standard-html') < 0) // but _not_ our markdown / HTML plugin
       || plugin.name.indexOf('plugin-source-maps') >= 0); // and source maps
-  }).map((plugin) => {
-    return plugin.provider(compilation);
   });
+  const standardResources = await Promise.all(serverResourcePlugins.map(async (plugin) => {
+    return plugin.provider(compilation);
+  }));
 
   app.use(async (ctx, next) => {
     const { outputDir } = compilation.context;
@@ -161,8 +161,8 @@ const getProdServer = async(compilation) => {
     if (compilation.config.devServer.proxy) {
       const proxyPlugin = compilation.config.plugins.filter((plugin) => {
         return plugin.name === 'plugin-dev-proxy';
-      }).map((plugin) => {
-        return plugin.provider(compilation);
+      }).map(async (plugin) => {
+        return await plugin.provider(compilation);
       })[0];
 
       if (url !== '/' && await proxyPlugin.shouldServe(url)) {

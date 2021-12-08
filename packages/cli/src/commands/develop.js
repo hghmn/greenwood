@@ -10,25 +10,22 @@ const runDevServer = async () => {
       const compilation = await generateCompilation();
       const { port } = compilation.config.devServer;
       
-      (await devServer(compilation)).listen(port, () => {
+      (await devServer(compilation)).listen(port, async () => {
         
         console.info(`Started local development server at localhost:${port}`);
+        const serverPlugins = [...compilation.config.plugins].filter(plugin => plugin.type === 'server');
 
-        const servers = [...compilation.config.plugins.filter((plugin) => {
-          return plugin.type === 'server';
-        }).map((plugin) => {
-          const provider = plugin.provider(compilation);
+        for (const plugin of serverPlugins) {
+          const server = await plugin.provider(compilation);
 
-          if (!(provider instanceof ServerInterface)) {
+          if (!(server instanceof ServerInterface)) {
             console.warn(`WARNING: ${plugin.name}'s provider is not an instance of ServerInterface.`);
           }
 
-          return provider;
-        })];
+          server.start();
+        }
 
-        return Promise.all(servers.map(async (server) => {
-          return await server.start();
-        }));
+        resolve();
       });
     } catch (err) {
       reject(err);

@@ -57,8 +57,8 @@ async function getOptimizedSource(url, plugins, compilation) {
       .filter((plugin) => {
         return plugin.type === 'resource'
           && plugin.name.indexOf('plugin-standard') === 0;
-      }).map((plugin) => {
-        return plugin.provider(compilation);
+      }).map(async (plugin) => {
+        return await plugin.provider(compilation);
       });
 
     optimizedSource = await standardResourcePlugins.reduce(async (sourcePromise, resource) => {
@@ -99,15 +99,10 @@ function greenwoodWorkspaceResolver (compilation) {
 }
 
 // https://github.com/rollup/rollup/issues/2873
-function greenwoodHtmlPlugin(compilation) {
+function greenwoodHtmlPlugin(compilation, customResources) {
   const { projectDirectory, userWorkspace, outputDir, scratchDir } = compilation.context;
   const { optimization } = compilation.config;
   const isRemoteUrl = (url = undefined) => url && (url.indexOf('http') === 0 || url.indexOf('//') === 0);
-  const customResources = compilation.config.plugins.filter((plugin) => {
-    return plugin.type === 'resource' && !plugin.isGreenwoodDefaultPlugin;
-  }).map((plugin) => {
-    return plugin.provider(compilation);
-  });
 
   return {
     name: 'greenwood-html-plugin',
@@ -514,20 +509,24 @@ const getRollupConfig = async (compilation) => {
   });
 
   // order matters but so far nodeModulesResource resolve plugin is the first in our list (so far)
-  const greenwoodRollupPlugins = compilation.config.plugins.filter((plugin) => {
-    return plugin.type === 'rollup' && plugin.isGreenwoodDefaultPlugin;
-  }).map((plugin) => {
-    return plugin.provider(compilation).flat();
-  }).concat([
-    greenwoodWorkspaceResolver(compilation),
-    greenwoodHtmlPlugin(compilation)
-  ]).flat();
+  const greenwoodRollupPlugins = compilation.config.plugins.filter((plugin) => plugin.type === 'rollup' && plugin.isGreenwoodDefaultPlugin);
 
-  const userRollupPlugins = compilation.config.plugins.filter((plugin) => {
-    return plugin.type === 'rollup' && !plugin.isGreenwoodDefaultPlugin;
-  }).map((plugin) => {
-    return plugin.provider(compilation).flat();
-  }).flat();
+  // (await Promise.all(greenwoodRollupPlugins.map(async (plugin) => {
+  //   return (await plugin.provider(compilation)).flat();
+  // }).concat([
+  //   greenwoodWorkspaceResolver(compilation),
+  //   greenwoodHtmlPlugin(compilation)
+  // ]))).flat();
+
+  const userRollupPlugins = compilation.config.plugins.filter((plugin) => plugin.type === 'rollup' && !plugin.isGreenwoodDefaultPlugin);
+
+  const customResourcePlugins = compilation.config.plugins.filter((plugin) => plugin.type === 'resource' && !plugin.isGreenwoodDefaultPlugin);
+  const customResources = await Promise.all(customResourcePlugins.map(async (plugin) => {
+    return plugin.provider(compilation);
+  }));
+  // ...(await(Promise.all(userRollupPlugins.map(async (plugin) => {
+  //   return (await plugin.provider(compilation)).flat();
+  // }))).flat();
 
   return [{
     input: inputs,
@@ -566,8 +565,16 @@ const getRollupConfig = async (compilation) => {
       }
     },
     plugins: [
-      ...greenwoodRollupPlugins,
-      ...userRollupPlugins
+      ...(await Promise.all(greenwoodRollupPlugins.map(async (plugin) => {
+        return (await plugin.provider(compilation)).flat();
+      }).concat([
+        greenwoodWorkspaceResolver(compilation),
+        greenwoodHtmlPlugin(compilation, customResources)
+      ]))).flat(),
+
+      ...(await Promise.all(userRollupPlugins.map(async (plugin) => {
+        return (await plugin.provider(compilation)).flat();
+      }))).flat()
     ]
   }];
 

@@ -8,13 +8,17 @@ import fs from 'fs';
 import path from 'path';
 import { ResourceInterface } from '@greenwood/cli/src/lib/resource-interface.js';
 import rollupBabelPlugin from '@rollup/plugin-babel';
+import { pathToFileURL, URL } from 'url';
 
 async function getConfig (compilation, extendConfig = false) {
   const { projectDirectory } = compilation.context;
-  const configFile = 'babel.config.mjs';
-  const defaultConfig = (await import(new URL(configFile, import.meta.url).pathname)).default;
-  const userConfig = fs.existsSync(path.join(projectDirectory, configFile))
-    ? (await import(`${projectDirectory}/${configFile}`)).default
+  const configFile = 'babel.config';
+  const defaultConfig = (await import(new URL(`${configFile}.mjs`, import.meta.url).pathname)).default;
+  // const userConfig = fs.existsSync(path.join(projectDirectory, configFile))
+  //   ? (await import(`${projectDirectory}/${configFile}`)).default
+  //   : {};
+  const userConfig = fs.existsSync(path.join(projectDirectory, `${configFile}.mjs`))
+    ? (await import(pathToFileURL(path.join(projectDirectory, `${configFile}.mjs`)))).default
     : {};
   let finalConfig = Object.assign({}, userConfig);
   
@@ -45,11 +49,11 @@ class BabelResource extends ResourceInterface {
   async intercept(url, body) {
     return new Promise(async(resolve, reject) => {
       try {
-        const config = await getConfig(this.compilation, this.options.extendConfig);
-        const result = await babel.transform(body, config);
+        // const config = await getConfig(this.compilation, this.options.extendConfig);
+        // const result = await babel.transform(body, config);
         
         resolve({
-          body: result.code
+          body // : result.code
         });
       } catch (e) {
         reject(e);
@@ -66,12 +70,12 @@ const greenwoodPluginBabel = (options = {}) => {
   }, {
     type: 'rollup',
     name: 'plugin-babel:rollup',
-    provider: (compilation) => [
+    provider: async (compilation) => [
       rollupBabelPlugin.default({
         // https://github.com/rollup/plugins/tree/master/packages/babel#babelhelpers
         babelHelpers: options.extendConfig ? 'runtime' : 'bundled',
         
-        ...getConfig(compilation, options.extendConfig)
+        ...await getConfig(compilation, options.extendConfig)
       })
     ]
   }];

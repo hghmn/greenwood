@@ -1,3 +1,5 @@
+import { fileURLToPath, URL } from 'url';
+
 export default {
 
   // https://github.com/zloirock/core-js/blob/master/docs/2019-03-19-core-js-3-babel-and-a-look-into-the-future.md#babelpreset-env
@@ -21,7 +23,7 @@ export default {
         },
 
         // https://babeljs.io/docs/en/babel-preset-env#configpath
-        configPath: import.meta.url
+        configPath: fileURLToPath(new URL('.', import.meta.url))
       }
     ]
   ],

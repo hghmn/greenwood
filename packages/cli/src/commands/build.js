@@ -25,24 +25,17 @@ const runProductionBuild = async () => {
           try {
             (await devServer(compilation)).listen(port, async () => {
               console.info(`Started local development server at localhost:${port}`);
-  
-              const servers = [...compilation.config.plugins.filter((plugin) => {
-                return plugin.type === 'server';
-              }).map((plugin) => {
-                const provider = plugin.provider(compilation);
+              const serverPlugins = [...compilation.config.plugins].filter(plugin => plugin.type === 'server');
+
+              for (const plugin of serverPlugins) {
+                const server = await plugin.provider(compilation);
       
-                if (!(provider instanceof ServerInterface)) {
+                if (!(server instanceof ServerInterface)) {
                   console.warn(`WARNING: ${plugin.name}'s provider is not an instance of ServerInterface.`);
                 }
-      
-                return provider;
-              })];
-      
-              await Promise.all(servers.map(async (server) => {
+    
                 server.start();
-      
-                return Promise.resolve(server);
-              }));
+              }
           
               await preRenderCompilation(compilation);
   

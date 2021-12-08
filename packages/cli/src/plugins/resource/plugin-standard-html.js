@@ -402,19 +402,18 @@ class StandardHtmlResource extends ResourceInterface {
         }
 
         // get context plugins
-        const contextPlugins = this.compilation.config.plugins.filter((plugin) => {
-          return plugin.type === 'context';
-        }).map((plugin) => {
+        const contextPlugins = this.compilation.config.plugins.filter((plugin) => plugin.type === 'context');
+        const providedContextPlugins = await Promise.all(contextPlugins.map(async () => {
           return plugin.provider(this.compilation);
-        });
+        }));
 
         if (mode === 'spa') {
           body = fs.readFileSync(this.compilation.graph[0].path, 'utf-8');
         } else {
-          body = getPageTemplate(barePath, userTemplatesDir, template, contextPlugins, pagesDir);
+          body = getPageTemplate(barePath, userTemplatesDir, template, providedContextPlugins, pagesDir);
         }
 
-        body = getAppTemplate(body, userTemplatesDir, customImports, contextPlugins, config.devServer.hud);
+        body = getAppTemplate(body, userTemplatesDir, customImports, providedContextPlugins, config.devServer.hud);
         body = getUserScripts(body, this.compilation.context);
         body = getMetaContent(normalizedUrl.replace(/\\/g, '/'), config, body);
         
